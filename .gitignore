@@ -132,7 +132,7 @@ dmypy.json
 *~
 
 # Data
-Simulations/*_data/
+#Simulations/*_data/
 Simulations/filters/
 Simulations/seds/
 Network/*_data/
