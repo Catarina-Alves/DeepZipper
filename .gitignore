@@ -136,3 +136,6 @@ Simulations/*_data/
 Simulations/filters/
 Simulations/seds/
 Network/*_data/
+
+# Other
+.DS_store
