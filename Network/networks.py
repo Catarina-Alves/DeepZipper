@@ -11,7 +11,7 @@ class CNN(nn.Module):
     def __init__(self, in_channels, num_classes):
         super(CNN, self).__init__()
 
-        #Network Components
+        # Network Components
         self.conv1 = nn.Conv2d(in_channels=in_channels,
                                out_channels=48,
                                kernel_size=15,
@@ -34,9 +34,8 @@ class CNN(nn.Module):
         self.fc2 = nn.Linear(in_features=408,
                              out_features=25)
 
-
     def forward(self, x):
-        #Network Flow
+        # Network Flow
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
@@ -50,11 +49,12 @@ class CNN(nn.Module):
         output = F.log_softmax(x, dim=1)
         return output
 
+
 class CNN_single(nn.Module):
     def __init__(self, in_channels, num_classes):
         super(CNN_single, self).__init__()
 
-        #Network Components
+        # Network Components
         self.conv1 = nn.Conv2d(in_channels=in_channels,
                                out_channels=48,
                                kernel_size=15,
@@ -81,7 +81,7 @@ class CNN_single(nn.Module):
                              out_features=num_classes)
 
     def forward(self, x):
-        #Network Flow
+        # Network Flow
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
@@ -96,15 +96,18 @@ class CNN_single(nn.Module):
         output = F.log_softmax(x, dim=1)
         return output
 
+
 class RNN(nn.Module):
     def __init__(self, input_size, num_classes):
         super(RNN, self).__init__()
 
+        # input & output will has batch size as 1s dimension. e.g. (batch,
+        # time_step, input_size)
         self.rnn = nn.LSTM(         # if use nn.RNN(), it hardly learns
             input_size=input_size,
             hidden_size=128,         # rnn hidden unit
             num_layers=2,           # number of rnn layer
-            batch_first=True,       # input & output will has batch size as 1s dimension. e.g. (batch, time_step, input_size)
+            batch_first=True,       # input & output note above
         )
 
         self.out = nn.Linear(128, 25)
@@ -114,21 +117,25 @@ class RNN(nn.Module):
         # r_out shape (batch, time_step, output_size)
         # h_n shape (n_layers, batch, hidden_size)
         # h_c shape (n_layers, batch, hidden_size)
-        r_out, (h_n, h_c) = self.rnn(x, None)   # None represents zero initial hidden state
+        # None represents zero initial hidden state
+        r_out, (h_n, h_c) = self.rnn(x, None)
 
         # choose r_out at the last time step
         out = self.out(r_out[:, -1, :])
         return out
 
+
 class RNN_single(nn.Module):
     def __init__(self, input_size, num_classes):
         super(RNN_single, self).__init__()
 
+        # input & output will has batch size as 1s dimension. e.g. (batch,
+        # time_step, input_size)
         self.rnn = nn.LSTM(         # if use nn.RNN(), it hardly learns
             input_size=input_size,
-            hidden_size=128,         # rnn hidden unit
+            hidden_size=128,        # rnn hidden unit
             num_layers=2,           # number of rnn layer
-            batch_first=True,       # input & output will has batch size as 1s dimension. e.g. (batch, time_step, input_size)
+            batch_first=True,       # see input & output note above
         )
 
         self.out = nn.Linear(128, 25)
@@ -139,18 +146,20 @@ class RNN_single(nn.Module):
         # r_out shape (batch, time_step, output_size)
         # h_n shape (n_layers, batch, hidden_size)
         # h_c shape (n_layers, batch, hidden_size)
-        r_out, (h_n, h_c) = self.rnn(x, None)   # None represents zero initial hidden state
+        # None represents zero initial hidden state
+        r_out, (h_n, h_c) = self.rnn(x, None)
 
         # choose r_out at the last time step
         out = self.out(r_out[:, -1, :])
         out = self.out2(out)
         return out
 
+
 class ZipperNN(nn.Module):
     def __init__(self, in_channels, input_size, num_classes):
         super(ZipperNN, self).__init__()
 
-        #Network Components
+        # Network Components
         self.cnn = CNN(in_channels, num_classes)
 
         self.rnn = RNN(input_size, num_classes)
@@ -162,12 +171,11 @@ class ZipperNN(nn.Module):
         rnn_output = self.rnn(x)
         cnn_output = self.cnn(y)
 
-        full_output = self.connection(torch.cat((rnn_output, cnn_output), dim=1))
+        full_output = self.connection(torch.cat((rnn_output, cnn_output),
+                                                dim=1))
         full_output = F.relu(full_output)
         full_output = self.connection2(full_output)
         full_output = F.log_softmax(full_output, dim=1)
-
-
         return full_output
 
 
@@ -197,7 +205,8 @@ class ZipperNNRegression(nn.Module):
         rnn_output = self.rnn(x)
         cnn_output = self.cnn(y)
 
-        full_output = self.connection(torch.cat((rnn_output, cnn_output), dim=1))
+        full_output = self.connection(torch.cat((rnn_output, cnn_output),
+                                                dim=1))
         full_output = F.relu(full_output)
         full_output = self.connection2(full_output)
         full_output = F.linear(full_output, dim=3)
