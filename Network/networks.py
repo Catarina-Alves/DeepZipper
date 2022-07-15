@@ -10,31 +10,31 @@ import torch.nn.functional as F
 class CNN(nn.Module):
     def __init__(self, in_channels, num_classes):
         super(CNN, self).__init__()
-        
+
         #Network Components
-        self.conv1 = nn.Conv2d(in_channels=in_channels, 
-                               out_channels=48, 
-                               kernel_size=15, 
+        self.conv1 = nn.Conv2d(in_channels=in_channels,
+                               out_channels=48,
+                               kernel_size=15,
                                stride=3,
                                padding=2)
-        
-        self.conv2 = nn.Conv2d(in_channels=48, 
+
+        self.conv2 = nn.Conv2d(in_channels=48,
                                out_channels=96,
-                               kernel_size=5, 
+                               kernel_size=5,
                                stride=1,
                                padding=2)
-        
+
         self.dropout1 = nn.Dropout2d(0.25)
-        
+
         self.dropout2 = nn.Dropout2d(0.5)
-        
-        self.fc1 = nn.Linear(in_features=3456, 
+
+        self.fc1 = nn.Linear(in_features=3456,
                              out_features=408)
-        
-        self.fc2 = nn.Linear(in_features=408, 
+
+        self.fc2 = nn.Linear(in_features=408,
                              out_features=25)
-        
-        
+
+
     def forward(self, x):
         #Network Flow
         x = self.conv1(x)
@@ -53,33 +53,33 @@ class CNN(nn.Module):
 class CNN_single(nn.Module):
     def __init__(self, in_channels, num_classes):
         super(CNN_single, self).__init__()
-        
+
         #Network Components
-        self.conv1 = nn.Conv2d(in_channels=in_channels, 
-                               out_channels=48, 
-                               kernel_size=15, 
+        self.conv1 = nn.Conv2d(in_channels=in_channels,
+                               out_channels=48,
+                               kernel_size=15,
                                stride=3,
                                padding=2)
-        
-        self.conv2 = nn.Conv2d(in_channels=48, 
+
+        self.conv2 = nn.Conv2d(in_channels=48,
                                out_channels=96,
-                               kernel_size=5, 
+                               kernel_size=5,
                                stride=1,
                                padding=2)
-        
+
         self.dropout1 = nn.Dropout2d(0.25)
-        
+
         self.dropout2 = nn.Dropout2d(0.5)
-        
-        self.fc1 = nn.Linear(in_features=3456, 
+
+        self.fc1 = nn.Linear(in_features=3456,
                              out_features=408)
-        
-        self.fc2 = nn.Linear(in_features=408, 
+
+        self.fc2 = nn.Linear(in_features=408,
                              out_features=25)
 
         self.fc3 = nn.Linear(in_features=25,
                              out_features=num_classes)
-        
+
     def forward(self, x):
         #Network Flow
         x = self.conv1(x)
@@ -95,7 +95,7 @@ class CNN_single(nn.Module):
         x = self.fc3(x)
         output = F.log_softmax(x, dim=1)
         return output
-    
+
 class RNN(nn.Module):
     def __init__(self, input_size, num_classes):
         super(RNN, self).__init__()
@@ -145,27 +145,61 @@ class RNN_single(nn.Module):
         out = self.out(r_out[:, -1, :])
         out = self.out2(out)
         return out
-    
+
 class ZipperNN(nn.Module):
     def __init__(self, in_channels, input_size, num_classes):
         super(ZipperNN, self).__init__()
-        
+
         #Network Components
         self.cnn = CNN(in_channels, num_classes)
-        
+
         self.rnn = RNN(input_size, num_classes)
-        
+
         self.connection = nn.Linear(50, num_classes*2)
         self.connection2 = nn.Linear(num_classes*2, num_classes)
-        
+
     def forward(self, x, y):
         rnn_output = self.rnn(x)
         cnn_output = self.cnn(y)
-        
+
         full_output = self.connection(torch.cat((rnn_output, cnn_output), dim=1))
         full_output = F.relu(full_output)
         full_output = self.connection2(full_output)
         full_output = F.log_softmax(full_output, dim=1)
-        
-        
+
+
+        return full_output
+
+
+class ZipperNNRegression(nn.Module):
+    def __init__(self, in_channels, input_size, num_param):
+        '''Construch a neural network to predict parameters
+
+        This neural network uses a linear function in the last layer to predict
+        the parameters.
+        '''
+        super(ZipperNNRegression, self).__init__()
+
+        # Set `num_classes=4` to mostly reproduce ZipperNN from Morgan et al.
+        # (2022) https://iopscience.iop.org/article/10.3847/1538-4357/ac5178
+        num_classes = 4
+
+        # Network Components
+        # Set `num_classes=None` when this parameter is not used
+        self.cnn = CNN(in_channels, num_classes=None)
+
+        self.rnn = RNN(input_size, num_classes=None)
+
+        self.connection = nn.Linear(50, num_classes*2)
+        self.connection2 = nn.Linear(num_classes*2, num_classes)
+
+    def forward(self, x, y):
+        rnn_output = self.rnn(x)
+        cnn_output = self.cnn(y)
+
+        full_output = self.connection(torch.cat((rnn_output, cnn_output), dim=1))
+        full_output = F.relu(full_output)
+        full_output = self.connection2(full_output)
+        full_output = F.linear(full_output, dim=3)
+
         return full_output
