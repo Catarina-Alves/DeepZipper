@@ -130,10 +130,10 @@ def process(image_arr, metadata, band='g'):
             # Define error flag
             error = False
 
-            # Select the object
-            example = clean_ims[prev_idx:idx-1, :, :, :]
+            # Select the object; excludes last
+            example = clean_ims[prev_idx:idx, :, :, :]
 
-            # Select the metadata
+            # Select the metadata ; includes last
             example_md = clean_md.loc[prev_idx:idx-1]
 
             # Determine cadence length
