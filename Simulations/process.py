@@ -11,50 +11,55 @@ from scipy import ndimage
 # Force numpy to raise an exception on div by zero
 np.seterr(all='raise')
 
+
 def filter_nans(images, metadata, band='g'):
     """
-    Remove examples where any image in the time series (in 
+    Remove examples where any image in the time series (in
     any band) contains NaNs. Prints fraction of data removed.
-    
+
     Args:
         images (np.array): shape (N, <num_bands>, <height>, <width>)
         metadata (pd.DataFrame): length N dataframe of metadata
         band (str, default='g'): band to use for metadata
-        
+
     Returns:
-        images where a NaN wasn't present, 
+        images where a NaN wasn't present,
         metadata where a NaN wasn't present
     """
     # Find the OBJIDs of the time series examples with NaNs
     mask = (np.sum(np.isnan(images), axis=(-1, -2, -3)) > 0)
     bad_objids = metadata[f'OBJID-{band}'].values[mask]
-    full_mask = np.array([x in bad_objids for x in metadata[f'OBJID-{band}'].values])
-    
+    full_mask = np.array([x in bad_objids for x
+                          in metadata[f'OBJID-{band}'].values])
+
     # Determine the data loss
     print("losing", round(sum(full_mask) / len(images) * 100, 2), "% (NaNs)")
-    
+
     # Apply the mask and return
-    return images[~full_mask], metadata[~full_mask].copy().reset_index(drop=True)
+    return images[~full_mask], metadata[~full_mask].copy().reset_index(
+        drop=True)
+
 
 def coadd_bands(image_arr):
     """
     Average an array of images in each band
-    
+
     Args:
         image_arr (np.array): shape (N, <num_bands>, <height>, <width>)
-        
+
     Returns:
         coadded array with shape (<num_bands>, <height>, <width>)
     """
     return np.mean(image_arr, axis=0)
-    
+
+
 def scale_bands(coadded_image_arr):
     """
     Scale pixel values to 0 to 1 preserving color
-    
+
     Args:
         coadded_image_arr (np.array): shape (<num_bands>, <height>, <width>)
-        
+
     Returns:
         scaled array with shape (<num_bands>, <height>, <width>)
 
@@ -62,43 +67,47 @@ def scale_bands(coadded_image_arr):
         ValueError if a constant image is detected
     """
 
-    return (coadded_image_arr - coadded_image_arr.min()) / (coadded_image_arr - coadded_image_arr.min()).max()
+    return (coadded_image_arr - coadded_image_arr.min()) / (
+        coadded_image_arr - coadded_image_arr.min()).max()
 
 
 def extract_lightcurves(images, aperture_rad=20):
     """
     Measure pixel values for each band
-    
+
     Args:
-        images (np.array): one time-series example shape (m, <num_bands>, <height>, <width>)
+        images (np.array): one time-series example shape (m, <num_bands>,
+            <height>, <width>)
         aperture_rad (int, default=20): radius in pixels of the aperture to use
-    
+
     Returns:
         lightcurve array for the example
     """
     # construct aperature mask
-    yy, xx = np.meshgrid(range(np.shape(images)[-1]), range(np.shape(images)[-1]))
+    yy, xx = np.meshgrid(range(np.shape(images)[-1]),
+                         range(np.shape(images)[-1]))
     center = int(round(np.shape(images)[-1] / 2))
     dist = np.sqrt((xx - center) ** 2 + (yy - center) ** 2)
     dist = np.sqrt((xx - center) ** 2 + (yy - center) ** 2)
     aperature = (dist <= 15)
-    
+
     # make time measurements
-    sum_in_aperature = np.sum(images[:,:,aperature], axis=-1)
-    med_outside_aperature = np.median(images[:,:,~aperature], axis=-1)
+    sum_in_aperature = np.sum(images[:, :, aperature], axis=-1)
+    med_outside_aperature = np.median(images[:, :, ~aperature], axis=-1)
     res = sum_in_aperature - med_outside_aperature * aperature.sum()
-    
+
     return res
+
 
 def process(image_arr, metadata, band='g'):
     """
     Iterate through image_arr and process data
-    
+
     Args:
         image_arr (np.array): shape (N, <num_bands>, <height>, <width>)
         metadata (pd.DataFrame): length N dataframe of metadata
         band (str, default='g'): band to use for metadata
-        
+
     Returns:
         processed_ims with shape (N, <num_bands>, <height>, <width>),
         lightcurves
@@ -108,30 +117,30 @@ def process(image_arr, metadata, band='g'):
 
     # Track the data loss due to errors
     num_errors = 0
-    
+
     # Separate by cadence length
     outdata = {}
-    
+
     # Iterate through data
     current_objid = clean_md[f'OBJID-{band}'].values.min()
     prev_idx = 0
     for idx, objid in enumerate(clean_md[f'OBJID-{band}'].values):
-        
+
         if objid != current_objid:
             # Define error flag
             error = False
-            
+
             # Select the object
-            example = clean_ims[prev_idx:idx-1,:,:,:]
-            
+            example = clean_ims[prev_idx:idx-1, :, :, :]
+
             # Select the metadata
             example_md = clean_md.loc[prev_idx:idx-1]
-            
+
             # Determine cadence length
             key = len(example)
             if key not in outdata:
                 outdata[key] = {"ims": [], 'lcs': [], 'mds': []}
-            
+
             # Coadd and scale the images - skip if error raised
             try:
                 processed_ims = scale_bands(coadd_bands(example))
@@ -152,9 +161,11 @@ def process(image_arr, metadata, band='g'):
             current_objid = objid
 
     # Report data loss
-    print("Losing",  round(float(num_errors) / float(len(outdata[key]["ims"])) * 100, 2), "% (Constants)")
-    
+    print("Losing",  round(float(num_errors) / float(
+        len(outdata[key]["ims"])) * 100, 2), "% (Constants)")
+
     return outdata
+
 
 def mirror_and_rotate(data):
     """
@@ -164,16 +175,18 @@ def mirror_and_rotate(data):
         data (dict): output of process()
 
     Returns:
-        outdata (dict): Same as data, but has mirrored and rotated copies appended
+        outdata (dict): Same as data, but has mirrored and rotated copies
+            appended
     """
 
     outdata = {}
     for key in data.keys():
         outdata[key] = {'ims': [], 'lcs': [], 'mds': []}
-        
+
         # Rotate and mirror the images, duplicate the metadata and lightcurves
         for angle in [0.0, 90.0, 180.0, 270.0]:
-            rotated_ims = ndimage.rotate(data[key]['ims'], axes=(-1,-2), angle=angle, reshape=False)
+            rotated_ims = ndimage.rotate(data[key]['ims'], axes=(-1, -2),
+                                         angle=angle, reshape=False)
 
             # Append rotated images to output
             outdata[key]["ims"].append(rotated_ims)
@@ -181,25 +194,24 @@ def mirror_and_rotate(data):
             outdata[key]["mds"].extend(data[key]['mds'])
 
             # Mirror images and append to output
-            outdata[key]["ims"].append(rotated_ims[:,:,::-1,:])
+            outdata[key]["ims"].append(rotated_ims[:, :, ::-1, :])
             outdata[key]["lcs"].append(data[key]['lcs'])
             outdata[key]["mds"].extend(data[key]['mds'])
 
         # Stack results
         outdata[key]["ims"] = np.concatenate(outdata[key]["ims"])
         outdata[key]["lcs"] = np.concatenate(outdata[key]["lcs"])
-            
+
     return outdata
-            
 
 
 def run(directory, configuration, show=True):
     print("Processing ", configuration)
-    
+
     # Ingest
     images = np.load(f'{directory}/{configuration}_images.npy')
     metadata = pd.read_csv(f'{directory}/{configuration}_metadata.csv')
-    
+
     # Process
     outdata = process(images, metadata, band='g')
 
@@ -208,20 +220,24 @@ def run(directory, configuration, show=True):
 
     # Create arrays for each cadence length and save
     for key in outdata:
-        
+
         out_ims = np.array(outdata[key]["ims"])
         out_lcs = np.array(outdata[key]["lcs"])
-        out_md = {idx: outdata[key]["mds"][idx] for idx in range(len(outdata[key]["mds"]))}
-        
+        out_md = {idx: outdata[key]["mds"][idx] for idx
+                  in range(len(outdata[key]["mds"]))}
+
         np.save(f"{directory}/{configuration}_proc_ims_{key}.npy", out_ims)
         np.save(f"{directory}/{configuration}_proc_lcs_{key}.npy", out_lcs)
-        np.save(f"{directory}/{configuration}_proc_mds_{key}.npy", out_md, allow_pickle=True)
+        np.save(f"{directory}/{configuration}_proc_mds_{key}.npy", out_md,
+                allow_pickle=True)
+
 
 if __name__ == '__main__':
     import utils
 
     directory = utils.get_dataset_name()
 
-    configurations = [x.split("/")[1].split("_images.")[0] for x in glob.glob(f"{directory}/*_images.npy")]
+    configurations = [x.split("/")[1].split("_images.")[0]
+                      for x in glob.glob(f"{directory}/*_images.npy")]
     for configuration in sorted(configurations):
         run(directory, configuration)
