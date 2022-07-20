@@ -124,17 +124,21 @@ def process(image_arr, metadata, band='g'):
     # Iterate through data
     current_objid = clean_md[f'OBJID-{band}'].values.min()
     prev_idx = 0
+    max_idx = len(clean_md[f'OBJID-{band}'].values) - 1  # last index
     for idx, objid in enumerate(clean_md[f'OBJID-{band}'].values):
-
-        if objid != current_objid:
+        if (objid != current_objid) or (idx == max_idx):
             # Define error flag
             error = False
 
-            # Select the object; excludes last
+            # Select the object; [] excludes last
             example = clean_ims[prev_idx:idx, :, :, :]
+            if idx == max_idx:  # do last object individually
+                example = clean_ims[prev_idx:, :, :, :]
 
-            # Select the metadata ; includes last
+            # Select the metadata ; .iloc[] includes last
             example_md = clean_md.loc[prev_idx:idx-1]
+            if idx == max_idx:  # do last object individually
+                example_md = clean_md.loc[prev_idx:]
 
             # Determine cadence length
             key = len(example)
