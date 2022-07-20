@@ -30,7 +30,7 @@ def predict(network, dataset):
         try:  # RNN
             predictions = torch.max(network(dataset[:]['lightcurve']),
                                     1)[1].data.numpy()
-        except TypeError:  # CNN
+        except RuntimeError:  # CNN
             predictions = torch.max(network(dataset[:]['image']),
                                     1)[1].data.numpy()
     labels = dataset[:]['label'].data.numpy()
