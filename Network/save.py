@@ -32,7 +32,7 @@ def save_performance(directory, file_prefix, net_type, prev_network,
     network = networks[net_type]
 
     network.load_state_dict(torch.load(f"{directory}/"
-                                       "{file_prefix}_{net_type}_network.pt"))
+                                       f"{file_prefix}_{net_type}_network.pt"))
     network.eval()
 
     # Save classifications
@@ -53,7 +53,7 @@ def save_performance(directory, file_prefix, net_type, prev_network,
     output = np.hstack((res, labels.reshape(len(labels), 1)))
     df = pd.DataFrame(data=output, columns=columns)
     df.to_csv(f"{directory}/{file_prefix}_{net_type}_"
-              "classifications{train_info}.csv", index=False)
+              f"classifications{train_info}.csv", index=False)
 
     # Save network performance
     out_data = [(a, b, c) for a, b, c in zip(
