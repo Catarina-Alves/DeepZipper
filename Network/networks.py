@@ -209,6 +209,6 @@ class ZipperNNRegression(nn.Module):
                                                 dim=1))
         full_output = F.relu(full_output)
         full_output = self.connection2(full_output)
-        full_output = F.linear(full_output, dim=3)
+        full_output = F.linear(full_output, dim=1)
 
         return full_output
