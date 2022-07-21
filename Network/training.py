@@ -88,6 +88,10 @@ def train_zipper(zipper, train_dataloader, train_dataset, test_dataset,
                         torch.save(zipper.state_dict(),
                                    f"{outfile_prefix}_network.pt")
                         best_val_acc = validation_accuracy
+                        best_state = zipper.state_dict()
+
+    # Return the network with the best state
+    zipper.load_state_dict(best_state)
 
     setattr(zipper, 'losses', losses)
     setattr(zipper, 'train_acc', train_acc)
@@ -177,6 +181,10 @@ def train_single(network, train_dataloader, train_dataset, test_dataset,
                         torch.save(network.state_dict(),
                                    f"{outfile_prefix}_network.pt")
                         best_val_acc = validation_accuracy
+                        best_state = network.state_dict()
+
+    # Return the network with the best state
+    network.load_state_dict(best_state)
 
     setattr(network, 'losses', losses)
     setattr(network, 'train_acc', train_acc)
