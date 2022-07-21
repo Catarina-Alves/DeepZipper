@@ -57,6 +57,7 @@ class ToCombinedTensor(object):
 
 
 def make_train_test_datasets(directory: str, class_names: list, suffix: int,
+                             regression_params=None,
                              transform=ToCombinedTensor(), label_map={}):
     images, lightcurves, labels, metadata = [], [], [], []
 
@@ -73,26 +74,37 @@ def make_train_test_datasets(directory: str, class_names: list, suffix: int,
         im = np.load(im_file)
         images.append(im.reshape((len(im), 4, 45, 45)))
 
-        # Labels
-        class_label = (label_map[class_name] if class_name in label_map
-                       else label)
-        print(class_label)
-        labels.extend([class_label]*len(im))
-
         # Metadata
         md_file = f'{directory}/{class_name}_mds_{suffix}.npy'
-        metadata.append(np.load(md_file, allow_pickle=True).item())
+        metadata_i = np.load(md_file, allow_pickle=True).item()
+        metadata.append(metadata_i)
+
+        # Labels
+        if regression_params is None:
+            class_label = (label_map[class_name] if class_name in label_map
+                           else label)
+            print(class_label)
+            labels.extend([class_label]*len(im))
+        else:
+            params = []
+            for j in list(metadata_i):
+                params.append(metadata_i[j][regression_params].iloc[0])
 
     # Shuffle and split data
     X_lc = np.concatenate(lightcurves)
     X_im = np.concatenate(images)
-    y = np.array(labels, dtype=int)
+    if regression_params is None:
+        y = np.array(labels, dtype=int)
+        stratify = y
+    else:
+        y = np.array(params)
+        stratify = None
     (train_lightcurves, test_lightcurves,
      train_labels, test_labels) = train_test_split(
-        X_lc, y, test_size=0.1, random_state=6, stratify=y)
+        X_lc, y, test_size=0.1, random_state=6, stratify=stratify)
 
     train_images, test_images, garb1, garb2 = train_test_split(
-        X_im, y, test_size=0.1, random_state=6, stratify=y)
+        X_im, y, test_size=0.1, random_state=6, stratify=stratify)
 
     # Split and save metadata
     full_md = []
@@ -101,15 +113,19 @@ def make_train_test_datasets(directory: str, class_names: list, suffix: int,
             full_md.append(v)
 
     train_md, test_md, garb1, garb2 = train_test_split(
-        full_md, y, test_size=0.1, random_state=6, stratify=y)
+        full_md, y, test_size=0.1, random_state=6, stratify=stratify)
 
     train_md = {idx: train_md[idx] for idx in range(len(train_md))}
     test_md = {idx: test_md[idx] for idx in range(len(test_md))}
 
-    np.save(f"{directory}/{directory}_train_md_{suffix}.npy", train_md,
-            allow_pickle=True)
-    np.save(f"{directory}/{directory}_test_md_{suffix}.npy", test_md,
-            allow_pickle=True)
+    extra_str = ""
+    if regression_params is not None:
+        extra_str = str(len(regression_params))
+
+    np.save(f"{directory}/{directory}_train_md_{suffix}_{extra_str}.npy",
+            train_md, allow_pickle=True)
+    np.save(f"{directory}/{directory}_test_md_{suffix}_{extra_str}.npy",
+            test_md, allow_pickle=True)
 
     # Create a PyTorch Dataset
     return (CombinedDataset(train_images, train_lightcurves, train_labels,
