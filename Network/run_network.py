@@ -35,7 +35,8 @@ label_maps = {'ZIPPER': {},
               'RNN': {'GROUP_1': 0, 'GROUP_2': 0, 'GROUP_3': 1, 'GROUP_4': 2}}
 groups = ['GROUP_1', 'GROUP_2', 'GROUP_3', 'GROUP_4']
 print("Loading data")
-train_dataset, test_dataset = data_utils.make_train_test_datasets(dataset_name, groups, suffix, label_map=label_maps[net_type])
+train_dataset, test_dataset = data_utils.make_train_test_datasets(
+    dataset_name, groups, suffix, label_map=label_maps[net_type])
 
 # Get dataloader
 train_dataloader = data_utils.make_dataloader(train_dataset)
@@ -43,32 +44,26 @@ train_dataloader = data_utils.make_dataloader(train_dataset)
 # Train network
 print(f"Training {net_type}")
 if net_type == 'ZIPPER':
-    network = training.train_zipper(network,
-                                    train_dataloader,
-                                    train_dataset,
-                                    test_dataset,
-                                    monitor=True,
-                                    outfile_prefix=f"{dataset_name}/{dataset_name}_{net_type}")
+    network = training.train_zipper(
+        network, train_dataloader, train_dataset, test_dataset, monitor=True,
+        outfile_prefix=f"{dataset_name}/{dataset_name}_{net_type}")
 elif net_type == 'RNN':
-    network = training.train_single(network,
-                                    train_dataloader,
-                                    train_dataset,
-                                    test_dataset,
-                                    'lightcurve',
-			            monitor=True,
-                                    outfile_prefix=f"{dataset_name}/{dataset_name}_{net_type}")
+    network = training.train_single(
+        network, train_dataloader, train_dataset, test_dataset,
+        'lightcurve', monitor=True,
+        outfile_prefix=f"{dataset_name}/{dataset_name}_{net_type}")
 elif net_type == 'CNN':
-    network = training.train_single(network,
-                                    train_dataloader,
-                                    train_dataset,
-                                    test_dataset,
-                                    'image',
-                                    monitor=True,
-                                    outfile_prefix=f"{dataset_name}/{dataset_name}_{net_type}")
+    network = training.train_single(
+        network, train_dataloader, train_dataset, test_dataset,
+        'image', monitor=True,
+        outfile_prefix=f"{dataset_name}/{dataset_name}_{net_type}")
 else:
-    raise NotImplementedError(f"Unexpected control flow caused by net_type = {net_type}")
+    raise NotImplementedError("Unexpected control flow caused by net_type = "
+                              f"{net_type}")
 
 print("Saving results")
 # Save the performance
-save.save_performance(dataset_name, dataset_name, net_type, network, test_dataset)
-save.save_performance(dataset_name, dataset_name, net_type, network, train_dataset, train=True)
+save.save_performance(dataset_name, dataset_name, net_type, network,
+                      test_dataset)
+save.save_performance(dataset_name, dataset_name, net_type, network,
+                      train_dataset, train=True)
