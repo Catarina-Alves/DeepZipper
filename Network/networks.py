@@ -229,7 +229,7 @@ class RNNRegression(nn.Module):
     `num_classes` is an input for that reason
     """
     def __init__(self, input_size, num_classes):
-        super(RNN, self).__init__()
+        super(RNNRegression, self).__init__()
 
         # input & output will has batch size as 1s dimension. e.g. (batch,
         # time_step, input_size)
