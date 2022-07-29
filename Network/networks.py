@@ -179,6 +179,82 @@ class ZipperNN(nn.Module):
         return full_output
 
 
+class CNNRegression(nn.Module):
+    """TODO: eventually modify to also be able to use for regression directly
+    `num_classes` is an input for that reason
+    """
+    def __init__(self, in_channels, num_classes):
+        super(CNNRegression, self).__init__()
+
+        # Network Components
+        self.conv1 = nn.Conv2d(in_channels=in_channels,
+                               out_channels=48,
+                               kernel_size=3,
+                               stride=3,
+                               padding=2)
+
+        self.batch = nn.BatchNorm2d(num_features=48)
+
+#         Try without dropout; add only that when I have large linear layers
+#         or overfitting
+#         self.dropout1 = nn.Dropout(0.25)
+
+#         self.dropout2 = nn.Dropout(0.5)
+
+        self.fc1 = nn.Linear(in_features=3072,
+                             out_features=408)
+
+        self.fc2 = nn.Linear(in_features=408,
+                             out_features=25)
+
+    def forward(self, x):
+        # Network Flow
+        x = self.conv1(x)
+        x = self.batch(x)
+        x = F.relu(x)
+#         x = self.conv2(x)
+        x = F.max_pool2d(x, kernel_size=2)
+#         x = self.dropout1(x)
+        x = torch.flatten(x, 1)
+        x = self.fc1(x)
+        x = F.relu(x)
+#         x = self.dropout2(x)
+        x = self.fc2(x)
+#         x = F.relu(x)
+        return x
+
+
+class RNNRegression(nn.Module):
+    """TODO: eventually modify to also be able to use for regression directly
+    `num_classes` is an input for that reason
+    """
+    def __init__(self, input_size, num_classes):
+        super(RNN, self).__init__()
+
+        # input & output will has batch size as 1s dimension. e.g. (batch,
+        # time_step, input_size)
+        self.rnn = nn.LSTM(         # if use nn.RNN(), it hardly learns
+            input_size=input_size,
+            hidden_size=32,         # rnn hidden unit ; before 128
+            num_layers=1,           # number of rnn layer ; before 2
+            batch_first=True,       # input & output note above
+        )
+
+        self.out = nn.Linear(32, 25)
+
+    def forward(self, x):
+        # x shape (batch, time_step, input_size)
+        # r_out shape (batch, time_step, output_size)
+        # h_n shape (n_layers, batch, hidden_size)
+        # h_c shape (n_layers, batch, hidden_size)
+        # None represents zero initial hidden state
+        r_out, (h_n, h_c) = self.rnn(x, None)
+
+        # choose r_out at the last time step
+        out = self.out(r_out[:, -1, :])
+        return out
+
+
 class ZipperNNRegression(nn.Module):
     def __init__(self, in_channels, input_size, num_param):
         '''Construch a neural network to predict parameters
@@ -194,12 +270,12 @@ class ZipperNNRegression(nn.Module):
 
         # Network Components
         # Set `num_classes=None` when this parameter is not used
-        self.cnn = CNN(in_channels, num_classes=None)
+        self.cnn = CNNRegression(in_channels, num_classes=None)
 
-        self.rnn = RNN(input_size, num_classes=None)
+        self.rnn = RNNRegression(input_size, num_classes=None)
 
         self.connection = nn.Linear(50, num_classes*2)
-        self.connection2 = nn.Linear(num_classes*2, num_classes)
+        self.connection2 = nn.Linear(num_classes*2, num_param)
 
     def forward(self, x, y):
         rnn_output = self.rnn(x)
@@ -209,6 +285,4 @@ class ZipperNNRegression(nn.Module):
                                                 dim=1))
         full_output = F.relu(full_output)
         full_output = self.connection2(full_output)
-        full_output = F.linear(full_output, dim=1)
-
         return full_output
