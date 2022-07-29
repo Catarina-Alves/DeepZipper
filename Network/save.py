@@ -67,3 +67,49 @@ def save_performance(directory, file_prefix, net_type, prev_network,
     # Save dataset
     torch.save(test_dataset,
                f"{directory}/{file_prefix}_{net_type}_dataset{train_info}.pt")
+
+
+def save_performance_regression(directory, file_prefix, net_type, network,
+                                test_dataset, train=False):
+    """
+    Save the classifications, network monitoring, network, and test_dataset
+
+    Args:
+        directory (str): directory name to put output, no trailing '/'
+        file_prefix (str): prefix for outfiles
+        net_type (str): type of netowrk like RNN, CNN, or ZIPPER
+        network: A trained neural network
+        test_dataset: the dataset used for testing
+        train (bool, default=False): save the training performance
+    """
+    # Handle train flag
+    train_info = "_train" if train else ""
+
+    # Load best network
+    network.load_state_dict(torch.load(f"{directory}/"
+                                       f"{file_prefix}_{net_type}_network.pt"))
+    network.eval()
+
+    # Save classifications
+    labels = test_dataset[:]['label'].data.numpy()
+    res = network(test_dataset[:]['lightcurve'],
+                  test_dataset[:]['image']).detach().numpy()
+    columns = network.regression_params
+
+    output = np.hstack((res, labels.reshape(len(labels), 1)))
+    df = pd.DataFrame(data=output, columns=columns)
+    df.to_csv(f"{directory}/{file_prefix}_{net_type}_"
+              f"classifications{train_info}.csv", index=False)
+
+    # Save network performance
+    out_data = [(a, b, c) for a, b, c in zip(
+        network.losses, network.train_acc,
+        network.validation_acc)]
+    out_columns = ["Loss", "Train Acc", "Test Acc"]
+    df = pd.DataFrame(data=out_data, columns=out_columns)
+    df.to_csv(f"{directory}/{file_prefix}_{net_type}_monitoring.csv",
+              index=False)
+
+    # Save dataset
+    torch.save(test_dataset,
+               f"{directory}/{file_prefix}_{net_type}_dataset{train_info}.pt")
