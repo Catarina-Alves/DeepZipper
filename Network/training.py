@@ -325,11 +325,10 @@ def train_network_regression(network, train_dataloader, train_dataset,
 
         # Performance monitoring if desired
         if monitor:
-            print("Epoch: {0}  | Training Accuracy: {2:.3f}"
-                  " -- Validation Accuracy: {3:.3f} -- Loss: {4:.3f}"
-                  "".format(epoch + 1, np.mean(train_acc_epoch),
-                            np.mean(validation_acc_epoch),
-                            np.mean(loss_epoch)))
+            print(f"Epoch: {epoch + 1}  | Training Accuracy: "
+                  f"{np.mean(train_acc_epoch):.3f} -- "
+                  f"Validation Accuracy: {np.mean(validation_acc_epoch):.3f}"
+                  f" -- Loss: { np.mean(loss_epoch):.3f}")
 
     # Return the network with the best state
     network.load_state_dict(best_state)
