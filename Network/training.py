@@ -323,7 +323,7 @@ def train_network_regression(network, train_dataloader, train_dataset,
         # Save average performance per epoch
         losses.append(np.mean(loss_epoch))
         train_acc.append(np.mean(train_acc_epoch))
-        train_acc.append(np.mean(validation_acc_epoch))
+        validation_acc.append(np.mean(validation_acc_epoch))
 
         # Performance monitoring if desired
         if monitor:
