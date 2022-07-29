@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
+from sklearn.preprocessing import StandardScaler
+
 
 def plot_grad_flow(named_parameters):
     """Plot the gradient flow of the named parameters.
@@ -284,7 +286,7 @@ def train_network_regression(network, train_dataloader, train_dataset,
 
             # Evaluate all gradients along the loss surface using back
             # propagation
-#             loss.mean().backward()
+            # loss.mean().backward()
             loss.backward()
 
             if show_grad_flow:
@@ -338,3 +340,23 @@ def train_network_regression(network, train_dataloader, train_dataset,
     setattr(network, 'validation_acc', validation_acc)
 
     return network
+
+
+def scale_labels(labels):
+    """Scale the labels to have mean 0 and std 1.
+
+    This procedure is recommended to improve neeural networks learning.
+    """
+    scaler = StandardScaler()
+
+    # Transform data
+    scaled_labels = scaler.fit_transform(labels)
+    return scaler, scaled_labels
+
+
+def unscale_labels(scaler, labels):
+    """Unscale the labels.
+    """
+    # Transform back data
+    unscaled_labels = scaler.inverse_transform(labels)
+    return unscaled_labels
