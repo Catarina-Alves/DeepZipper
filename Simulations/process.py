@@ -216,9 +216,6 @@ def run(directory, configuration, show=True):
     images = np.load(f'{directory}/{configuration}_images.npy')
     metadata = pd.read_csv(f'{directory}/{configuration}_metadata.csv')
 
-    # Keep track of original events
-    metadata['OBJID-ori'] = metadata['OBJID-g']
-
     # Process
     outdata = process(images, metadata, band='g')
 
