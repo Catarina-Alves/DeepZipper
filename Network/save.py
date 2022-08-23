@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 
 from networks import ZipperNN, CNN_single, RNN_single
+from training import unscale_labels
 
 
 def save_performance(directory, file_prefix, net_type, prev_network,
@@ -91,12 +92,11 @@ def save_performance_regression(directory, file_prefix, net_type, network,
     network.eval()
 
     # Save classifications
-    labels = test_dataset[:]['label'].data.numpy()
     res = network(test_dataset[:]['lightcurve'],
                   test_dataset[:]['image']).detach().numpy()
+    output = unscale_labels(scaler=network.scaler, labels=res)
     columns = network.regression_params
 
-    output = np.hstack((res, labels.reshape(len(labels), 1)))
     df = pd.DataFrame(data=output, columns=columns)
     df.to_csv(f"{directory}/{file_prefix}_{net_type}_"
               f"classifications{train_info}.csv", index=False)
