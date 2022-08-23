@@ -252,7 +252,7 @@ def train_network_regression(network, train_dataloader, train_dataset,
     losses, train_acc, validation_acc = [], [], []
 
     # Track best validation acc
-    best_val_acc = 0.0
+    lower_val_loss = 999999999
 
     for epoch in range(number_training_epochs):
         sys.stdout.write("\rEpoch {0}\r".format(epoch + 1))
@@ -307,17 +307,17 @@ def train_network_regression(network, train_dataloader, train_dataset,
                 test_dataset[0:validation_size]['image'])
             validation_true = test_dataset[0:validation_size]['label']
             validation_loss = loss_function(validation_output, validation_true)
-            validation_accuracy = validation_loss.data.numpy()
+            validation_loss = validation_loss.data.numpy()
 
             loss_epoch.append(loss.data.numpy())
             train_acc_epoch.append(train_loss.data.numpy())
-            validation_acc_epoch.append(validation_accuracy)
+            validation_acc_epoch.append(validation_loss)
 
             # Save best network
-            if validation_accuracy > best_val_acc:
+            if validation_loss < lower_val_loss:
                 torch.save(network.state_dict(),
-                           f"{outfile_prefix}_regression_network.pt")
-                best_val_acc = validation_accuracy
+                           f"{outfile_prefix}_network.pt")
+                lower_val_loss = validation_loss
                 best_state = network.state_dict()
 
         # Save average performance per epoch
@@ -342,19 +342,20 @@ def train_network_regression(network, train_dataloader, train_dataset,
     return network
 
 
-def scale_labels(labels):
+def scale_labels(labels, scaler=None):
     """Scale the labels to have mean 0 and std 1.
 
     This procedure is recommended to improve neeural networks learning.
     """
-    scaler = StandardScaler()
+    if scaler is None:
+        scaler = StandardScaler()
 
     # Transform data
     scaled_labels = scaler.fit_transform(labels)
     return scaler, scaled_labels
 
 
-def unscale_labels(scaler, labels):
+def unscale_labels(labels, scaler):
     """Unscale the labels.
     """
     # Transform back data
