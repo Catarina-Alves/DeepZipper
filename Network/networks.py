@@ -256,7 +256,7 @@ class RNNRegression(nn.Module):
 
 
 class ZipperNNRegression(nn.Module):
-    def __init__(self, in_channels, input_size, num_param):
+    def __init__(self, in_channels, input_size, num_params):
         '''Construch a neural network to predict parameters
 
         This neural network uses a linear function in the last layer to predict
@@ -275,7 +275,7 @@ class ZipperNNRegression(nn.Module):
         self.rnn = RNNRegression(input_size, num_classes=None)
 
         self.connection = nn.Linear(50, num_classes*2)
-        self.connection2 = nn.Linear(num_classes*2, num_param)
+        self.connection2 = nn.Linear(num_classes*2, num_params)
 
     def forward(self, x, y):
         rnn_output = self.rnn(x)
