@@ -58,7 +58,10 @@ class ToCombinedTensor(object):
 
 def make_train_test_datasets(directory: str, class_names: list, suffix: int,
                              regression_params=None,
-                             transform=ToCombinedTensor(), label_map={}):
+                             transform=ToCombinedTensor(), label_map={},
+                             is_aug_separate=False):
+    """is_aug_separate: the regressionZipperNet uses this as True to not mix
+    augmented events of the same event in the train and test set."""
     images, lightcurves, labels, metadata = [], [], [], []
 
     # Ingest and label data
@@ -93,27 +96,60 @@ def make_train_test_datasets(directory: str, class_names: list, suffix: int,
     # Shuffle and split data
     X_lc = np.concatenate(lightcurves)
     X_im = np.concatenate(images)
+    full_md = []  # metadata
+    for md in metadata:
+        for v in md.values():
+            full_md.append(v)
+
     if regression_params is None:
         y = np.array(labels, dtype=int)
         stratify = y
     else:
         y = np.array(params)
         stratify = None
-    (train_lightcurves, test_lightcurves,
-     train_labels, test_labels) = train_test_split(
-        X_lc, y, test_size=0.1, random_state=6, stratify=stratify)
 
-    train_images, test_images, garb1, garb2 = train_test_split(
-        X_im, y, test_size=0.1, random_state=6, stratify=stratify)
+    if is_aug_separate:
+        # Splits must keep mirrored and rotated events in the same group
+        objs_ori = []
+        for i in metadata_i.keys():
+            objs_ori.append(metadata_i[i]['OBJID-g'].iloc[0])
 
-    # Split and save metadata
-    full_md = []
-    for md in metadata:
-        for v in md.values():
-            full_md.append(v)
+        ori_unique = np.unique(objs_ori)
 
-    train_md, test_md, garb1, garb2 = train_test_split(
-        full_md, y, test_size=0.1, random_state=6, stratify=stratify)
+        # Split on the original events
+        (train_ids_ori, test_ids_ori, _, _) = train_test_split(
+            ori_unique, ori_unique, test_size=0.1, random_state=6,
+            stratify=stratify)
+
+        is_train = np.isin(objs_ori, train_ids_ori)
+        is_test = np.isin(objs_ori, test_ids_ori)
+
+        train_labels = y[is_train]
+        test_labels = y[is_test]
+
+        train_lightcurves = X_lc[is_train]
+        test_lightcurves = X_lc[is_test]
+
+        train_images = X_im[is_train]
+        test_images = X_im[is_test]
+
+        # Metadata full_md is a pandas list so it needs to be dealt seperately
+        index_train = np.where(is_train == 1)[0]
+        train_md = [full_md[i] for i in index_train]
+        index_test = np.where(is_test == 1)[0]
+        test_md = [full_md[i] for i in index_test]
+
+    else:
+        (train_lightcurves, test_lightcurves,
+            train_labels, test_labels) = train_test_split(
+            X_lc, y, test_size=0.1, random_state=6, stratify=stratify)
+
+        train_images, test_images, garb1, garb2 = train_test_split(
+            X_im, y, test_size=0.1, random_state=6, stratify=stratify)
+
+        train_md, test_md, garb1, garb2 = train_test_split(
+            full_md, y, test_size=0.1, random_state=6, stratify=stratify)
+        return full_md, y, train_md, test_md
 
     train_md = {idx: train_md[idx] for idx in range(len(train_md))}
     test_md = {idx: test_md[idx] for idx in range(len(test_md))}
